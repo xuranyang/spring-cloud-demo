@@ -16,6 +16,7 @@
         <module>cloud-provider-payment8002</module>
         <module>cloudalibaba-provider-payment9001</module>
         <module>cloudalibaba-provider-payment9002</module>
+        <module>cloudalibaba-consumer-nacos-order83</module>
     </modules>
     <packaging>pom</packaging>
 

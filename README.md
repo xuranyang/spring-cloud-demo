@@ -46,3 +46,6 @@ https://github.com/alibaba/nacos/releases <br>
 
 http://localhost:9001/payment/nacos/1
 http://localhost:9002/payment/nacos/1
+
+Nacos负载均衡<br>
+http://localhost:83/consumer/payment/nacos/13
