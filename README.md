@@ -37,3 +37,12 @@ localhost:8002/payment/get/1
 http://localhost:8001/actuator/health
 http://localhost:8001/payment/discovery
 ```
+
+
+### Nacos
+https://github.com/alibaba/nacos/releases <br>
+解压安装包，直接运行bin目录下的startup.cmd -m standalone<br>
+命令运行成功后直接访问http://localhost:8848/nacos，默认账号密码都是nacos
+
+http://localhost:9001/payment/nacos/1
+http://localhost:9002/payment/nacos/1
