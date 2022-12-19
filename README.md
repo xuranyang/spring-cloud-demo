@@ -49,3 +49,15 @@ http://localhost:9002/payment/nacos/1
 
 Nacos负载均衡<br>
 http://localhost:83/consumer/payment/nacos/13
+
+
+Nacos把默认AP切换成CP<br>
+```shell
+curl -X PUT '$NACOS_SERVER:8848/nacos/v1/ns/operator/switches?entry=serverMode&value=CP
+```
+
+
+http://localhost:3377/config/info
+
+config:
+    info: nacos config center, nacos-config-client-dev.yaml, version=1
