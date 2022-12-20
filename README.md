@@ -61,3 +61,38 @@ http://localhost:3377/config/info
 
 config:
     info: nacos config center, nacos-config-client-dev.yaml, version=1
+
+
+<br>
+<br>
+<br>
+
+### Sentinel
+https://github.com/alibaba/Sentinel/releases
+
+```shell
+java -jar sentinel-dashboard-1.8.6.jar
+```
+localhost:8080
+<br>
+登录账号密码均为 sentinel
+
+Sentinel采用的懒加载说明：<br>
+执行一次访问即可
+- http://localhost:8401/testA
+- http://localhost:8401/testB
+
+效果：sentinel 8080 正在监控微服务8401
+<br><br>
+
+#### Sentinel流控-QPS直接失败
+测试：快速多次点击访问 http://localhost:8401/testA 
+<br>
+结果：返回页面 Blocked by Sentinel (flow limiting)
+
+
+
+
+
+
+
