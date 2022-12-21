@@ -90,9 +90,54 @@ Sentinel采用的懒加载说明：<br>
 <br>
 结果：返回页面 Blocked by Sentinel (flow limiting)
 
+<br>
+
+#### Sentinel热点key
+
+```
+http://localhost:8401/testHotKey?p1=abc
+http://localhost:8401/testHotKey?p1=abc&p2=33
+http://localhost:8401/testHotKey?p2=abc
 
 
+# 当p1等于5的时候，阈值变为200
+# 当p1不等于5的时候，阈值就是平常的1
+http://localhost:8401/testHotKey?p1=5
+http://localhost:8401/testHotKey?p1=3
+```
 
+先启动Nacos和Sentinel
+http://localhost:8401/byResource
+```json
+{"code":200,"message":"按资源名称限流测试OK","data":{"id":2020,"serial":"serial001"}}
+```
+<br>
 
+疯狂点击，返回了自己定义的限流处理信息，限流发生
+```json
+{"code":444,"message":"com.alibaba.csp.sentinel.slots.block.flow.FlowException\t 服务不可用","data":null}
+```
 
+<br>
 
+按照Url地址限流 + 后续处理
+http://localhost:8401/rateLimit/byUrl
+```json
+{"code":200,"message":"按url限流测试OK","data":{"id":2020,"serial":"serial002"}}
+```
+
+通过访问的URL来限流，会返回Sentinel自带默认的限流处理信息<br>
+```Blocked by Sentinel (flow limiting)```
+
+<br>
+
+http://localhost:8401/rateLimit/customerBlockHandler
+```json
+{"code":200,"message":"按客戶自定义","data":{"id":2020,"serial":"serial003"}}
+```
+<br>
+多次刷新后，我们自定义兜底方法的字符串信息就返回到前端
+
+```json
+{"code":4444,"message":"按客戶自定义,global handlerException----2","data":null}
+```
