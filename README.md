@@ -141,3 +141,177 @@ http://localhost:8401/rateLimit/customerBlockHandler
 ```json
 {"code":4444,"message":"按客戶自定义,global handlerException----2","data":null}
 ```
+
+
+<br>
+
+#### Sentinel服务熔断
+sentinel整合 ribbon + openFeign + fallback <br>
+Ribbon系列
+- 启动nacos和sentinel
+- 提供者9003/9004
+- 消费者84
+```
+http://localhost:9003/paymentSQL/1
+http://localhost:9004/paymentSQL/1
+
+http://localhost:84/consumer/fallback/1
+http://localhost:84/consumer/fallback/4
+http://localhost:84/consumer/fallback/5
+```
+
+##### Sentinel服务熔断无配置
+没有任何配置 - 给用户error页面，不友好 <br>
+java.lang.IllegalArgumentException: IllegalArgumentException,非法参数异常.... <br>
+java.lang.NullPointerException: NullPointerException,该ID没有对应记录,空指针异常 <br>
+
+<br>
+
+##### Sentinel服务熔断只配置fallback
+```json
+{"code":200,"message":"from mysql,serverPort:  9004","data":null}
+```
+```json
+{"code":444,"message":"兜底异常handlerFallback,exception内容  NullPointerException,该ID没有对应记录,空指针异常","data":{"id":5,"serial":"null"}}
+```
+<br>
+
+##### Sentinel服务熔断只配置blockHandler
+Sentinel->簇点链路->列表视图->资源名:fallback->操作:熔断(老版本叫降级)
+->熔断策略:异常数->异常数:2->统计时长:2000ms->熔断时长:1s(随意)
+
+快速点击 <br>
+http://localhost:84/consumer/fallback/4 <br>
+http://localhost:84/consumer/fallback/5 <br>
+
+{"code":445,"message":"blockHandler-sentinel限流,无此流水: blockException  null","data":{"id":4,"serial":"null"}}
+{"code":445,"message":"blockHandler-sentinel限流,无此流水: blockException  null","data":{"id":5,"serial":"null"}}
+
+<br>
+
+##### Sentinel服务熔断fallback和blockHandler都配置
+若blockHandler和fallback 都进行了配置，则被限流降级而抛出BlockException时只会进入blockHandler处理逻辑。
+<br>
+Sentinel->簇点链路->列表视图->资源名:fallback->操作:流控 ->阈值类型:QPS->单机阈值:1
+```json
+{"code":445,"message":"blockHandler-sentinel限流,无此流水: blockException  null","data":{"id":1,"serial":"null"}}
+```
+```json
+{"code":444,"message":"兜底异常handlerFallback,exception内容  IllegalArgumentException,非法参数异常....","data":{"id":4,"serial":"null"}}
+```
+```json
+{"code":445,"message":"blockHandler-sentinel限流,无此流水: blockException  null","data":{"id":4,"serial":"null"}}
+```
+```json
+{"code":444,"message":"兜底异常handlerFallback,exception内容  NullPointerException,该ID没有对应记录,空指针异常","data":{"id":5,"serial":"null"}}
+```
+```json
+{"code":445,"message":"blockHandler-sentinel限流,无此流水: blockException  null","data":{"id":5,"serial":"null"}}
+```
+
+<br>
+
+##### Sentinel服务熔断exceptionsToIgnore
+exceptionsToIgnore，忽略指定异常，即这些异常不用兜底方法处理。
+
+<br>
+
+##### Sentinel服务熔断OpenFeign
+Feign组件一般是消费侧<br>
+修改84模块:<br>
+- yml文件
+```yml
+# 激活Sentinel对Feign的支持
+feign:
+  sentinel:
+    enabled: true
+```
+- 业务类
+
+带@Feignclient注解的业务接口，fallback = PaymentFallbackService.class
+
+- 主启动
+
+带@EnableFeignClients注解
+
+<br>
+
+
+http://localhost:84/consumer/openfeign/1
+
+```json
+{"code":200,"message":"from mysql,serverPort:  9003","data":{"id":1,"serial":"28a8c1e3bc2742d8848569891fb42181"}}
+```
+
+<br>
+直接F5刷新页面 http://localhost:84/consumer/openfeign/1 <br>
+此时故意关闭9003和9004微服务提供者，84消费侧自动降级，不会被耗死。
+
+```json
+{"code":44444,"message":"服务降级返回,---PaymentFallbackService","data":{"id":1,"serial":"errorSerial"}}
+```
+
+<br>
+
+##### Sentinel持久化规则
+一旦我们重启应用，sentinel规则将消失，生产环境需要将配置规则进行持久化。<br>
+将限流配置规则持久化进Nacos保存，只要刷新8401某个rest地址，sentinel控制台的流控规则就能看到，只要Nacos里面的配置不删除，针对8401上sentinel上的流控规则持续有效。<br>
+
+- yml文件
+```yml
+      datasource: #<---------------------------关注点，添加Nacos数据源配置
+        ds1:
+          nacos:
+            server-addr: localhost:8848
+            dataId: cloudalibaba-sentinel-service
+            groupId: DEFAULT_GROUP
+            data-type: json
+            rule-type: flow
+```
+
+添加Nacos业务规则配置
+<br>
+配置列表->创建配置
+<br>
+- Data ID：cloudalibaba-sentinel-service <br>
+- 配置格式：JSON
+```json
+[{
+    "resource": "/rateLimit/byUrl",
+    "limitApp": "default",
+    "grade": 1,
+    "count": 1, 
+    "strategy": 0,
+    "controlBehavior": 0,
+    "clusterMode": false
+}]
+```
+- resource：资源名称；
+- limitApp：来源应用；
+- grade：阈值类型，0表示线程数, 1表示QPS；
+- count：单机阈值；
+- strategy：流控模式，0表示直接，1表示关联，2表示链路；
+- controlBehavior：流控效果，0表示快速失败，1表示Warm Up，2表示排队等待；
+- clusterMode：是否集群。
+
+<br>
+
+正常访问
+http://localhost:8401/rateLimit/byUrl
+
+```json
+{"code":200,"message":"按url限流测试OK","data":{"id":2020,"serial":"serial002"}}
+```
+
+快速访问测试接口 
+- http://localhost:8401/rateLimit/byUrl 
+- 页面返回Blocked by Sentinel (flow limiting)
+
+<br>停止8401再看sentinel - 停机后发现流控规则没有了
+
+
+<br>重新启动8401再看sentinel
+- 调用1次 - http://localhost:8401/rateLimit/byUrl
+- 重新配置出现了，持久化验证通过
+
+
